@@ -1,0 +1,17 @@
+{
+  "name": "downvideo",
+  "version": "1.0.0",
+  "description": "Clean and minimalist YouTube video downloader CLI",
+  "type": "module",
+  "main": "down.js",
+  "bin": {
+    "down": "./down.js"
+  },
+  "scripts": {
+    "start": "node down.js",
+    "test": "node down.js --help"
+  },
+  "keywords": ["youtube", "downloader", "cli", "yt-dlp"],
+  "author": "",
+  "license": "MIT"
+}
