@@ -227,10 +227,11 @@ export async function downloadMedia(url, options = {}) {
     '--no-playlist',
     '--newline',
     '--no-warnings',
+    '--concurrent-fragments', '4',
     '--ffmpeg-location', binDir,
     '--js-runtimes', nodeRuntime,
     '-o', outputTemplate,
-    '--progress-template', 'PROGRESS:%(progress._percent_str)s|%(progress._speed_str)s|%(progress._eta_str)s|%(progress._total_bytes_estimate_str)s',
+    '--progress-template', 'download:PROGRESS:%(progress._percent_str)s|%(progress._speed_str)s|%(progress._eta_str)s|%(progress._total_bytes_estimate_str)s',
     '--print', 'after_move:FINAL_DEST:%(filepath)s'
   ];
 
@@ -252,7 +253,11 @@ export async function downloadMedia(url, options = {}) {
   args.push(url);
 
   return new Promise((resolve, reject) => {
-    const child = spawn(ytDlpPath, args, { windowsHide: true });
+    const child = spawn(ytDlpPath, args, {
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: { ...process.env, PYTHONUNBUFFERED: '1' }
+    });
     let finalFilePath = '';
     let hasMerged = false;
     let lastError = '';
@@ -268,13 +273,43 @@ export async function downloadMedia(url, options = {}) {
           continue;
         }
 
-        if (line.startsWith('PROGRESS:')) {
-          const raw = line.replace('PROGRESS:', '').trim();
+        // Detecta sleep solicitado pelo YouTube
+        const sleepMatch = line.match(/Sleeping\s+([\d\.]+)\s+seconds/i);
+        if (sleepMatch) {
+          clearProgress();
+          step(`Aguardando liberação dos servidores do YouTube (${sleepMatch[1]}s)...`);
+          continue;
+        }
+
+        // Detecta início do stream de vídeo ou áudio
+        if (line.includes('Destination:') && !line.includes('.temp.')) {
+          clearProgress();
+          if (line.includes('.f') || line.includes('f399') || line.includes('f137')) {
+            step('Baixando fluxo de dados...');
+          }
+        }
+
+        // 1. Parser via template customizado
+        if (line.includes('PROGRESS:')) {
+          const raw = line.substring(line.indexOf('PROGRESS:') + 9).trim();
           const [rawPct, speed, eta, size] = raw.split('|');
 
           const cleanPct = parseFloat((rawPct || '').replace('%', '').trim());
           if (!isNaN(cleanPct)) {
             renderProgress(cleanPct, speed?.trim(), eta?.trim(), size?.trim());
+          }
+          continue;
+        }
+
+        // 2. Parser padrão do yt-dlp [download] xx.x% of xxMiB at xxMiB/s ETA xx:xx
+        const dlMatch = line.match(/\[download\]\s+([\d\.]+)%\s+of\s+([^\s]+)\s+at\s+([^\s]+)(?:\s+ETA\s+([^\s]+))?/i);
+        if (dlMatch) {
+          const pct = parseFloat(dlMatch[1]);
+          const size = dlMatch[2];
+          const speed = dlMatch[3];
+          const eta = dlMatch[4] || '';
+          if (!isNaN(pct)) {
+            renderProgress(pct, speed, eta, size);
           }
           continue;
         }
