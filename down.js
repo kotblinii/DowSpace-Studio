@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-// down.js — Clean YouTube Downloader CLI (Compatível com After Effects e Premiere)
+// down.js — Clean YouTube Downloader CLI (Compatível com After Effects, Premiere e Autenticação de Cookies)
 
 import readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import path from 'node:path';
 import fs from 'node:fs';
 import { ensureBinaries, updateYtDlp } from './src/binaries.js';
-import { getVideoMetadata, downloadMedia, getDefaultDownloadDir, getVideoCodec, convertToH264 } from './src/downloader.js';
+import { getVideoMetadata, downloadMedia, getDefaultDownloadDir, getVideoCodec, convertToH264, findCookiesFile } from './src/downloader.js';
 import { banner, info, step, success, error, warn, colors } from './src/ui.js';
 
 function showHelp() {
@@ -19,6 +19,7 @@ function showHelp() {
   console.log(` ${colors.bold}Opções:${colors.reset}`);
   console.log(`   ${colors.green}--mp3, -a${colors.reset}          Baixa apenas o áudio convertido em MP3`);
   console.log(`   ${colors.green}--dir, -d <caminho>${colors.reset} Define a pasta de destino do arquivo`);
+  console.log(`   ${colors.green}--cookies, -c <arq>${colors.reset} Caminho para arquivo cookies.txt do YouTube`);
   console.log(`   ${colors.green}--update, -u${colors.reset}       Atualiza o motor yt-dlp para a versão mais recente`);
   console.log(`   ${colors.green}--help, -h${colors.reset}         Exibe esta mensagem de ajuda`);
   console.log();
@@ -26,6 +27,7 @@ function showHelp() {
   console.log(`   ${colors.gray}$${colors.reset} down "https://www.youtube.com/watch?v=dQw4w9WgXcQ"`);
   console.log(`   ${colors.gray}$${colors.reset} down "https://youtu.be/dQw4w9WgXcQ" --mp3`);
   console.log(`   ${colors.gray}$${colors.reset} down "C:\\Users\\Usuario\\Downloads\\video_antigo.mp4"`);
+  console.log(`   ${colors.gray}$${colors.reset} down "https://youtu.be/..." --cookies "C:\\cookies.txt"`);
   console.log();
 }
 
@@ -85,6 +87,7 @@ async function main() {
   let target = '';
   let isAudioOnly = false;
   let customDir = null;
+  let customCookies = null;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -92,6 +95,8 @@ async function main() {
       isAudioOnly = true;
     } else if (arg === '--dir' || arg === '-d') {
       customDir = args[++i];
+    } else if (arg === '--cookies' || arg === '-c') {
+      customCookies = args[++i];
     } else if (!arg.startsWith('-') && !target) {
       target = arg.trim();
     }
@@ -156,6 +161,7 @@ async function main() {
   }
 
   const outputDir = customDir ? path.resolve(customDir) : getDefaultDownloadDir();
+  const cookiesFile = findCookiesFile(customCookies);
 
   try {
     // 1. Garantir que os executáveis necessários estejam presentes
@@ -163,7 +169,7 @@ async function main() {
 
     // 2. Extração rápida de metadados
     step('Obtendo dados do vídeo...');
-    const meta = await getVideoMetadata(url);
+    const meta = await getVideoMetadata(url, cookiesFile);
 
     console.log();
     info('Título', meta.title);
@@ -171,13 +177,17 @@ async function main() {
     info('Duração', meta.duration);
     info('Formato', isAudioOnly ? `${colors.magenta}Áudio MP3${colors.reset}` : `${colors.cyan}Vídeo MP4 (H.264/AAC - After Effects Ready)${colors.reset}`);
     info('Destino', outputDir);
+    if (cookiesFile) {
+      info('Cookies', `${colors.green}Ativo (${path.basename(cookiesFile)})${colors.reset}`);
+    }
     console.log();
 
     // 3. Início do Download
     step(`Iniciando download de "${meta.title}"...`);
     const result = await downloadMedia(url, {
       isAudioOnly,
-      outputDir
+      outputDir,
+      cookiesPath: cookiesFile
     });
 
     success('Download concluído com sucesso!');

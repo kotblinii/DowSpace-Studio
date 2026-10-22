@@ -39,17 +39,44 @@ function formatDuration(sec) {
 }
 
 /**
+ * Formata erros conhecidos do YouTube para mensagens claras e amigáveis em português.
+ */
+export function formatYouTubeError(errStr) {
+  if (!errStr) return 'Erro desconhecido ao processar vídeo.';
+  
+  if (errStr.includes("Sign in to confirm") || 
+      errStr.includes("not a bot") ||
+      errStr.includes("Faça login para confirmar") ||
+      errStr.includes("LOGIN_REQUIRED")) {
+    return 'O YouTube bloqueou este vídeo exigindo confirmação de login ("Sign in to confirm you\'re not a bot").\n' +
+           '   Isso ocorre em vídeos com restrição de idade, direitos musicais ou checagem anti-bot do Google.\n' +
+           '   💡 Solução: Baixe a extensão "Get cookies.txt LOCALLY" no seu navegador, exporte o arquivo "cookies.txt" do YouTube e salve na pasta do projeto.';
+  }
+
+  if (errStr.includes("Private video") || errStr.includes("Video unavailable")) {
+    return 'Este vídeo é privado ou não está disponível.';
+  }
+
+  return errStr;
+}
+
+/**
  * Obtém informações do vídeo rapidamente sem baixar.
  */
-export async function getVideoMetadata(url) {
+export async function getVideoMetadata(url, cookiesPath = null) {
   return new Promise((resolve, reject) => {
     const args = [
       '--dump-single-json',
       '--no-playlist',
       '--no-warnings',
-      '--quiet',
-      url
+      '--quiet'
     ];
+
+    if (cookiesPath && fs.existsSync(cookiesPath)) {
+      args.push('--cookies', cookiesPath);
+    }
+
+    args.push(url);
 
     const child = spawn(ytDlpPath, args, { windowsHide: true });
     let stdoutData = '';
@@ -77,8 +104,8 @@ export async function getVideoMetadata(url) {
           reject(new Error(`Falha ao ler dados do vídeo: ${e.message}`));
         }
       } else {
-        const errMsg = stderrData.trim() || 'Link inválido ou vídeo indisponível.';
-        reject(new Error(errMsg));
+        const rawErr = stderrData.trim() || 'Link inválido ou vídeo indisponível.';
+        reject(new Error(formatYouTubeError(rawErr)));
       }
     });
 
@@ -159,12 +186,31 @@ export function convertToH264(filePath) {
 }
 
 /**
+ * Procura automaticamente por um arquivo cookies.txt no projeto ou na pasta Downloads.
+ */
+export function findCookiesFile(customPath = null) {
+  if (customPath && fs.existsSync(customPath)) {
+    return path.resolve(customPath);
+  }
+  const localProject = path.resolve('cookies.txt');
+  if (fs.existsSync(localProject)) {
+    return localProject;
+  }
+  const userDownloads = path.join(os.homedir(), 'Downloads', 'cookies.txt');
+  if (fs.existsSync(userDownloads)) {
+    return userDownloads;
+  }
+  return null;
+}
+
+/**
  * Executa o download com parsing de progresso em tempo real e garante compatibilidade com After Effects.
  */
 export async function downloadMedia(url, options = {}) {
   const {
     isAudioOnly = false,
-    outputDir = getDefaultDownloadDir()
+    outputDir = getDefaultDownloadDir(),
+    cookiesPath = null
   } = options;
 
   if (!fs.existsSync(outputDir)) {
@@ -183,6 +229,10 @@ export async function downloadMedia(url, options = {}) {
     '--progress-template', 'PROGRESS:%(progress._percent_str)s|%(progress._speed_str)s|%(progress._eta_str)s|%(progress._total_bytes_estimate_str)s',
     '--print', 'after_move:FINAL_DEST:%(filepath)s'
   ];
+
+  if (cookiesPath && fs.existsSync(cookiesPath)) {
+    args.push('--cookies', cookiesPath);
+  }
 
   if (isAudioOnly) {
     args.push('-x', '--audio-format', 'mp3', '--audio-quality', '0');
@@ -266,7 +316,8 @@ export async function downloadMedia(url, options = {}) {
           reject(postErr);
         }
       } else {
-        reject(new Error(lastError.trim() || `Falha no download (Código ${code})`));
+        const rawErr = lastError.trim() || `Falha no download (Código ${code})`;
+        reject(new Error(formatYouTubeError(rawErr)));
       }
     });
 
