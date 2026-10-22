@@ -1,7 +1,14 @@
 node_modules/
 bin/
+cookies.txt
+*.mp4
+*.webm
+*.m4a
+*.mp3
 *.tmp
 *.zip
 *.log
 test-downloads/
 test-ae/
+test-check/
+test-final/

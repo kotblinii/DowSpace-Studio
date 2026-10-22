@@ -65,11 +65,13 @@ export function formatYouTubeError(errStr) {
  */
 export async function getVideoMetadata(url, cookiesPath = null) {
   return new Promise((resolve, reject) => {
+    const nodeRuntime = `node:${process.execPath}`;
     const args = [
       '--dump-single-json',
       '--no-playlist',
       '--no-warnings',
-      '--quiet'
+      '--quiet',
+      '--js-runtimes', nodeRuntime
     ];
 
     if (cookiesPath && fs.existsSync(cookiesPath)) {
@@ -220,11 +222,13 @@ export async function downloadMedia(url, options = {}) {
   // Template de nome de arquivo seguro
   const outputTemplate = path.join(outputDir, '%(title)s [%(id)s].%(ext)s');
 
+  const nodeRuntime = `node:${process.execPath}`;
   const args = [
     '--no-playlist',
     '--newline',
     '--no-warnings',
     '--ffmpeg-location', binDir,
+    '--js-runtimes', nodeRuntime,
     '-o', outputTemplate,
     '--progress-template', 'PROGRESS:%(progress._percent_str)s|%(progress._speed_str)s|%(progress._eta_str)s|%(progress._total_bytes_estimate_str)s',
     '--print', 'after_move:FINAL_DEST:%(filepath)s'
