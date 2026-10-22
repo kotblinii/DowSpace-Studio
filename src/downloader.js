@@ -157,7 +157,7 @@ export function convertToH264(filePath) {
       '-i', filePath,
       '-c:v', 'libx264',
       '-pix_fmt', 'yuv420p',
-      '-preset', 'fast',
+      '-preset', 'veryfast',
       '-crf', '18',
       '-c:a', 'aac',
       '-b:a', '192k',
@@ -242,10 +242,12 @@ export async function downloadMedia(url, options = {}) {
   if (isAudioOnly) {
     args.push('-x', '--audio-format', 'mp3', '--audio-quality', '0');
   } else {
-    // IMPORTANTE: Prioriza H.264 (avc1) e áudio AAC (m4a/mp4a) nativamente.
-    // É o padrão 100% suportado pelo Adobe After Effects, Premiere Pro e outros editores.
+    // IMPORTANTE: Baixa diretamente o stream de vídeo que JÁ ESTÁ em H.264 (avc1)
+    // e o áudio em AAC (mp4a) dos servidores do YouTube.
+    // Isso evita re-encoding no computador do usuário, tornando o download instantâneo
+    // e 100% compatível com o After Effects / Premiere.
     args.push(
-      '-S', 'vcodec:h264,res,acodec:m4a',
+      '-f', 'bestvideo[vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[vcodec^=avc1]+bestaudio/bestvideo+bestaudio/best',
       '--merge-output-format', 'mp4'
     );
   }
