@@ -7,7 +7,8 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { spawn } from 'node:child_process';
 import { ytDlpPath, binDir, ffmpegPath } from './binaries.js';
-import { renderProgress, clearProgress, step, success, error, info, colors } from './ui.js';
+import { renderProgress, clearProgress, step, success, error, info, colors, formatDuration } from './ui.js';
+export { compressVideo, getVideoDetails, COMPRESSION_LEVELS } from './compressor.js';
 
 /**
  * Retorna o diretório padrão de Downloads do usuário.
@@ -24,19 +25,6 @@ export function getDefaultDownloadDir() {
   return localDownloads;
 }
 
-/**
- * Formata segundos em mm:ss ou hh:mm:ss.
- */
-function formatDuration(sec) {
-  if (!sec || isNaN(sec)) return '--:--';
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = Math.floor(sec % 60);
-  if (h > 0) {
-    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  }
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
 
 /**
  * Formata erros conhecidos do YouTube para mensagens claras e amigáveis em português.
@@ -239,15 +227,27 @@ export async function downloadMedia(url, options = {}) {
     args.push('--cookies', cookiesPath);
   }
 
-  if (isAudioOnly) {
+  const resChoice = (options.resolution || '').toLowerCase();
+  const isAudio = isAudioOnly || resChoice === 'audio';
+
+  if (isAudio) {
     args.push('-x', '--audio-format', 'mp3', '--audio-quality', '0');
-  } else {
-    // IMPORTANTE: Baixa diretamente o stream de vídeo que JÁ ESTÁ em H.264 (avc1)
-    // e o áudio em AAC (mp4a) dos servidores do YouTube.
-    // Isso evita re-encoding no computador do usuário, tornando o download instantâneo
-    // e 100% compatível com o After Effects / Premiere.
+  } else if (resChoice === '4k' || resChoice === '2160p') {
+    // 4K Ultra HD (<= 2160p)
     args.push(
-      '-f', 'bestvideo[vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[vcodec^=avc1]+bestaudio/bestvideo+bestaudio/best',
+      '-f', 'bestvideo[height<=2160]+bestaudio/best[height<=2160]/best',
+      '--merge-output-format', 'mp4'
+    );
+  } else if (resChoice === '720p') {
+    // 720p HD Rápido (<= 720p)
+    args.push(
+      '-f', 'bestvideo[height<=720][vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[height<=720]+bestaudio/best[height<=720]',
+      '--merge-output-format', 'mp4'
+    );
+  } else {
+    // 1080p Full HD (Padrão Recomendado — H.264/AAC After Effects Ready)
+    args.push(
+      '-f', 'bestvideo[height<=1080][vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[height<=1080]+bestaudio/bestvideo+bestaudio/best',
       '--merge-output-format', 'mp4'
     );
   }
@@ -299,6 +299,14 @@ export async function downloadMedia(url, options = {}) {
           const cleanPct = parseFloat((rawPct || '').replace('%', '').trim());
           if (!isNaN(cleanPct)) {
             renderProgress(cleanPct, speed?.trim(), eta?.trim(), size?.trim());
+            if (typeof options.onProgress === 'function') {
+              options.onProgress({
+                percent: cleanPct,
+                speed: speed?.trim() || '',
+                eta: eta?.trim() || '',
+                size: size?.trim() || ''
+              });
+            }
           }
           continue;
         }
@@ -312,6 +320,14 @@ export async function downloadMedia(url, options = {}) {
           const eta = dlMatch[4] || '';
           if (!isNaN(pct)) {
             renderProgress(pct, speed, eta, size);
+            if (typeof options.onProgress === 'function') {
+              options.onProgress({
+                percent: pct,
+                speed: speed || '',
+                eta: eta || '',
+                size: size || ''
+              });
+            }
           }
           continue;
         }

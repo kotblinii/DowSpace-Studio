@@ -1,17 +1,42 @@
 {
-  "name": "downvideo",
+  "name": "dowspace-studio",
+  "productName": "DowSpace Studio",
   "version": "1.0.0",
-  "description": "Clean and minimalist YouTube video downloader CLI",
+  "description": "DowSpace Studio — Baixador de Vídeos YouTube (até 4K & MP3), Compactador Inteligente 2-Pass e Gerenciador de SSD no estilo SpaceSniffer",
   "type": "module",
-  "main": "down.js",
+  "main": "main.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kotblinii/DowSpace-Studio.git"
+  },
   "bin": {
-    "down": "./down.js"
+    "down": "./down.js",
+    "compactar": "./compactar.js"
   },
   "scripts": {
     "start": "node down.js",
+    "app": "electron .",
+    "compactar": "node compactar.js",
+    "build": "npx electron-packager . \"DowSpace Studio\" --platform=win32 --arch=x64 --icon=assets/icon.ico --out=dist --overwrite --asar=false",
+    "install-app": "powershell -ExecutionPolicy Bypass -File scripts/install.ps1",
+    "shortcut": "powershell -ExecutionPolicy Bypass -File scripts/create_shortcuts.ps1",
     "test": "node down.js --help"
   },
-  "keywords": ["youtube", "downloader", "cli", "yt-dlp"],
-  "author": "",
-  "license": "MIT"
+  "keywords": [
+    "youtube",
+    "downloader",
+    "cli",
+    "yt-dlp",
+    "compress",
+    "compactar",
+    "ffmpeg",
+    "spacesniffer",
+    "storage-manager",
+    "electron"
+  ],
+  "author": "kotblinii",
+  "license": "MIT",
+  "dependencies": {
+    "electron": "^45.0.0"
+  }
 }

@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DowSpace Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar / Navegação Lateral -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">🎬</div>
+        <div class="brand-text">
+          <span class="brand-title">DowSpace</span>
+          <span class="brand-badge">STUDIO</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="tab-download">
+          <span class="nav-icon">⬇</span>
+          <span class="nav-label">Baixar Vídeo</span>
+        </button>
+        <button class="nav-item" data-tab="tab-compress">
+          <span class="nav-icon">🗜</span>
+          <span class="nav-label">Compactador</span>
+          <span class="nav-pill">H.264</span>
+        </button>
+        <button class="nav-item" data-tab="tab-storage">
+          <span class="nav-icon">💾</span>
+          <span class="nav-label">Meu SSD</span>
+          <span class="nav-pill warning" id="nav-storage-pill">--%</span>
+        </button>
+      </nav>
+
+      <!-- Alternador de Tema Claro / Escuro -->
+      <div class="theme-switch-container">
+        <button class="theme-toggle-btn" id="btn-theme-toggle" title="Alternar entre Modo Escuro e Claro">
+          <span class="theme-icon" id="theme-icon">☀️</span>
+          <span class="theme-label" id="theme-label">Modo Claro</span>
+        </button>
+      </div>
+
+      <!-- Mini widget de status do SSD no rodapé da barra lateral -->
+      <div class="sidebar-footer">
+        <div class="ssd-quick-status" id="sidebar-ssd-card">
+          <div class="ssd-quick-header">
+            <span class="ssd-icon">💾</span>
+            <span class="ssd-name" id="sidebar-ssd-name">SSD (C:)</span>
+            <span class="ssd-pct" id="sidebar-ssd-pct">--%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="sidebar-ssd-bar" style="width: 0%;"></div>
+          </div>
+          <div class="ssd-quick-footer">
+            <span id="sidebar-ssd-free">-- GB livres</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Conteúdo Principal -->
+    <main class="main-content">
+      
+      <!-- ================= ABA 1: BAIXAR VÍDEO ================= -->
+      <section class="tab-pane active" id="tab-download">
+        <header class="pane-header">
+          <div>
+            <h1>Baixar do YouTube</h1>
+            <p class="subtitle">Baixe vídeos em qualidade máxima prontos para After Effects e Premiere ou extraia áudio MP3.</p>
+          </div>
+        </header>
+
+        <div class="card search-card">
+          <div class="input-group">
+            <input type="text" id="yt-url-input" placeholder="Cole o link do YouTube aqui (ex: https://www.youtube.com/watch?v=...)" autocomplete="off">
+            <button class="btn btn-secondary" id="btn-paste-url">Colar</button>
+            <button class="btn btn-primary" id="btn-fetch-meta">
+              <span>Analisar</span>
+            </button>
+          </div>
+
+          <div class="quality-selector-row">
+            <span class="selector-title">Qualidade do Vídeo / Áudio:</span>
+            <div class="quality-pills-group" id="yt-quality-group">
+              <label class="quality-pill">
+                <input type="radio" name="yt-quality" value="4k">
+                <div class="pill-inner">
+                  <div class="pill-texts">
+                    <span class="pill-title">4K</span>
+                    <small>Ultra HD (2160p)</small>
+                  </div>
+                </div>
+              </label>
+
+              <label class="quality-pill">
+                <input type="radio" name="yt-quality" value="1080p" checked>
+                <div class="pill-inner">
+                  <div class="pill-texts">
+                    <span class="pill-title">1080p</span>
+                    <small>Full HD (Padrão)</small>
+                  </div>
+                </div>
+              </label>
+
+              <label class="quality-pill">
+                <input type="radio" name="yt-quality" value="720p">
+                <div class="pill-inner">
+                  <div class="pill-texts">
+                    <span class="pill-title">720p</span>
+                    <small>HD Rápido</small>
+                  </div>
+                </div>
+              </label>
+
+              <label class="quality-pill">
+                <input type="radio" name="yt-quality" value="audio">
+                <div class="pill-inner">
+                  <div class="pill-texts">
+                    <span class="pill-title">Áudio MP3</span>
+                    <small>Alta Fidelidade</small>
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div class="options-row">
+            <div class="dest-selector">
+              <span class="dest-label">Salvar em:</span>
+              <button class="btn-folder" id="btn-choose-dest">
+                <span id="dest-folder-display">Pasta Downloads</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Preview do Vídeo -->
+        <div class="card meta-card hidden" id="yt-meta-card">
+          <div class="meta-content">
+            <div class="meta-info">
+              <h3 id="yt-meta-title">Título do Vídeo</h3>
+              <div class="meta-tags">
+                <span class="tag">Canal: <strong id="yt-meta-channel">--</strong></span>
+                <span class="tag">Duração: <strong id="yt-meta-duration">--:--</strong></span>
+                <span class="tag tag-cyan">Qualidade: <strong id="yt-meta-format">1080p Full HD</strong></span>
+              </div>
+            </div>
+            <button class="btn btn-gradient btn-large" id="btn-start-download">
+              <span>Baixar Vídeo</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Progresso do Download -->
+        <div class="card progress-card hidden" id="yt-progress-card">
+          <div class="progress-header">
+            <span class="status-badge" id="yt-status-badge">Baixando...</span>
+            <span class="progress-details" id="yt-progress-stats">0% • -- MB/s • ETA: --:--</span>
+          </div>
+          <div class="progress-track big">
+            <div class="progress-fill cyan" id="yt-progress-bar" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Sucesso do Download -->
+        <div class="card success-card hidden" id="yt-success-card">
+          <div class="success-icon">✓</div>
+          <div class="success-info">
+            <h3>Download Concluído com Sucesso!</h3>
+            <p id="yt-success-path">C:\Users\...\video.mp4</p>
+          </div>
+          <div class="success-actions">
+            <button class="btn btn-secondary" id="btn-open-downloaded-folder">Abrir no Explorer</button>
+            <button class="btn btn-magenta" id="btn-send-to-compressor">Compactar Vídeo</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= ABA 2: COMPACTADOR ================= -->
+      <section class="tab-pane" id="tab-compress">
+        <header class="pane-header">
+          <div>
+            <h1>Compactador de Vídeo Inteligente</h1>
+            <p class="subtitle">Reduza drasticamente o tamanho de qualquer vídeo mantendo ótima nitidez e compatibilidade total.</p>
+          </div>
+        </header>
+
+        <!-- Dropzone de Arquivos -->
+        <div class="card dropzone-card" id="compress-dropzone">
+          <div class="dropzone-inner" id="dropzone-content">
+            <div class="drop-icon">🎬</div>
+            <h3>Arraste e solte o vídeo aqui</h3>
+            <p class="drop-desc">ou clique no botão abaixo para escolher do computador</p>
+            <button class="btn btn-secondary" id="btn-select-video-file">Selecionar Arquivo de Vídeo</button>
+          </div>
+
+          <!-- Card do Vídeo Selecionado -->
+          <div class="selected-video-card hidden" id="selected-video-card">
+            <div class="video-preview-header">
+              <div class="file-badge">MP4</div>
+              <div class="file-details">
+                <h4 id="comp-file-name">meu_video.mp4</h4>
+                <div class="file-specs">
+                  <span>Tamanho: <strong id="comp-file-size">-- MB</strong></span>
+                  <span>Duração: <strong id="comp-file-duration">--:--</strong></span>
+                  <span>Resolução: <strong id="comp-file-res">--</strong></span>
+                  <span>Codec: <strong id="comp-file-codec">--</strong></span>
+                </div>
+              </div>
+              <button class="btn-icon" id="btn-remove-selected-video" title="Trocar de arquivo">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Seletor de Níveis de Compactação -->
+        <div class="compression-settings card" id="compress-settings-card">
+          <h3>Escolha o Nível de Compactação:</h3>
+          
+          <div class="levels-grid">
+            <!-- Nível Fraco -->
+            <label class="level-card">
+              <input type="radio" name="comp-level" value="fraco">
+              <div class="level-card-inner green">
+                <div class="level-top">
+                  <span class="level-name">Fraco (Leve)</span>
+                  <span class="level-saving">~30% menor</span>
+                </div>
+                <p class="level-desc">Máxima nitidez e fidelidade visual. Ideal para manter qualidade máxima de edição.</p>
+                <div class="level-meta">CRF 22 • Áudio 160k</div>
+              </div>
+            </label>
+
+            <!-- Nível Médio -->
+            <label class="level-card">
+              <input type="radio" name="comp-level" value="medio" checked>
+              <div class="level-card-inner cyan">
+                <div class="level-top">
+                  <span class="level-name">Médio (Equilibrado)</span>
+                  <span class="level-saving badge-best">~60% menor</span>
+                </div>
+                <p class="level-desc">Padrão recomendado: excelente redução mantendo alta nitidez para YouTube e web.</p>
+                <div class="level-meta">CRF 28 • Áudio 128k</div>
+              </div>
+            </label>
+
+            <!-- Nível Forte -->
+            <label class="level-card">
+              <input type="radio" name="comp-level" value="forte">
+              <div class="level-card-inner magenta">
+                <div class="level-top">
+                  <span class="level-name">Forte (Ultra Leve)</span>
+                  <span class="level-saving">~80% menor</span>
+                </div>
+                <p class="level-desc">Máxima economia de espaço. Perfeito para WhatsApp, Discord ou e-mails.</p>
+                <div class="level-meta">CRF 34 • Áudio 96k</div>
+              </div>
+            </label>
+          </div>
+
+          <!-- Controle Interativo de MB Alvo (Target Size Slider & Input) -->
+          <div class="target-size-control" id="target-size-control">
+            <div class="target-size-header">
+              <div class="target-size-title">
+                <span><strong>Tamanho Desejado do Vídeo:</strong></span>
+                <span class="two-pass-badge" title="Distribui os bits com precisão nas cenas de ação e calmas para máxima fidelidade visual">2-Pass Encoding Ativado</span>
+              </div>
+              <div class="target-size-input-wrapper">
+                <input type="number" id="comp-size-input" min="1" step="1" value="50">
+                <span class="unit">MB</span>
+              </div>
+            </div>
+            
+            <div class="slider-wrapper">
+              <input type="range" id="comp-size-slider" min="2" max="500" value="50" class="custom-slider">
+              <div class="slider-marks">
+                <span id="slider-min-mark">2 MB</span>
+                <span id="slider-current-mark">50 MB</span>
+                <span id="slider-max-mark">500 MB</span>
+              </div>
+            </div>
+
+            <div class="target-size-meta">
+              <span class="savings-indicator" id="comp-savings-badge">Economia estimada: -- MB (- --%)</span>
+              <span class="hint-text">Arraste para o tamanho exato que precisa para Discord, WhatsApp ou e-mails.</span>
+            </div>
+          </div>
+
+          <div class="compress-options-row">
+            <label class="checkbox-label">
+              <input type="checkbox" id="chk-replace-original">
+              <span class="checkbox-custom"></span>
+              <span>Substituir o arquivo original diretamente</span>
+            </label>
+            
+            <button class="btn btn-gradient btn-large" id="btn-start-compression" disabled>
+              <span>Iniciar Compactação</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Progresso da Compactação -->
+        <div class="card progress-card hidden" id="comp-progress-card">
+          <div class="progress-header">
+            <span class="status-badge magenta">Compactando...</span>
+            <span class="progress-details" id="comp-progress-stats">0% • --x • ETA: --:--</span>
+          </div>
+          <div class="progress-track big">
+            <div class="progress-fill magenta" id="comp-progress-bar" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Resumo Final da Compactação -->
+        <div class="card summary-card hidden" id="comp-summary-card">
+          <div class="summary-badge">✔ Vídeo Otimizado com Sucesso!</div>
+          <div class="summary-stats-grid">
+            <div class="stat-box">
+              <span class="stat-label">Tamanho Antes</span>
+              <span class="stat-val red" id="sum-original-size">-- MB</span>
+            </div>
+            <div class="stat-arrow">→</div>
+            <div class="stat-box">
+              <span class="stat-label">Tamanho Depois</span>
+              <span class="stat-val green" id="sum-final-size">-- MB</span>
+            </div>
+            <div class="stat-box highlight">
+              <span class="stat-label">Espaço Economizado</span>
+              <span class="stat-val cyan" id="sum-saved-size">-- MB (- --%)</span>
+            </div>
+          </div>
+          <div class="summary-actions">
+            <button class="btn btn-secondary" id="btn-open-compressed-folder">Revelar no Explorer</button>
+            <button class="btn btn-primary" id="btn-compress-another">Compactar Outro Vídeo</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= ABA 3: GERENCIADOR DE SSD ================= -->
+      <section class="tab-pane" id="tab-storage">
+        <header class="pane-header">
+          <div>
+            <h1>Gerenciador de Espaço do SSD</h1>
+            <p class="subtitle">Explore visualmente o seu disco no estilo SpaceSniffer e veja exatamente onde estão os arquivos grandes.</p>
+          </div>
+          <div class="drives-selector" id="drives-selector-container">
+            <!-- Pílulas de Unidades inseridas via JS -->
+          </div>
+        </header>
+
+        <!-- Cartão da Unidade Atual -->
+        <div class="card drive-overview-card" id="drive-overview-card">
+          <div class="drive-details-row">
+            <div class="drive-title-area">
+              <span class="drive-icon">💾</span>
+              <div>
+                <h3 id="current-drive-title">SSD (C:)</h3>
+                <span class="drive-sub" id="current-drive-status">Análise de Armazenamento do Windows</span>
+              </div>
+            </div>
+
+            <div class="drive-metrics">
+              <div class="metric">
+                <span class="metric-label">Usado</span>
+                <span class="metric-val red" id="metric-used">-- GB</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Livre</span>
+                <span class="metric-val green" id="metric-free">-- GB</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Capacidade</span>
+                <span class="metric-val" id="metric-total">-- GB</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="drive-bar-wrapper">
+            <div class="progress-track giant">
+              <div class="progress-fill gradient-storage" id="storage-meter-bar" style="width: 0%;"></div>
+            </div>
+            <span class="storage-meter-pct" id="storage-meter-pct">0%</span>
+          </div>
+
+          <div class="scanner-actions-bar">
+            <div class="scanner-target-info">
+              <span class="target-label">Local da Varredura:</span>
+              <strong id="scan-target-path">C:\</strong>
+              <button class="btn-link" id="btn-change-scan-folder">Alterar pasta</button>
+              <span class="db-status-badge hidden" id="db-status-badge" title="Dados carregados da última varredura salva">Varredura Salva</span>
+            </div>
+
+            <div class="scanner-btns">
+              <button class="btn btn-secondary hidden" id="btn-cancel-scan">Cancelar</button>
+              <button class="btn btn-secondary" id="btn-refresh-all" title="Atualizar dados de armazenamento e lista de arquivos">
+                <span>Atualizar Tudo</span>
+              </button>
+              <button class="btn btn-gradient btn-large" id="btn-start-scan">
+                <span>Escanear Unidade</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Barra de Progresso de Varredura -->
+          <div class="scan-live-progress hidden" id="scan-live-progress">
+            <div class="spinner"></div>
+            <div class="scan-live-text">
+              <span id="scan-live-status">Escaneando arquivos do SSD...</span>
+              <small id="scan-live-path">C:\...</small>
+            </div>
+            <span class="scan-counter-badge" id="scan-counter-badge">0 arquivos</span>
+          </div>
+        </div>
+
+        <!-- Resultados do Scanner: SpaceSniffer, Pastas e Vídeos -->
+        <div class="scan-results-container hidden" id="scan-results-container">
+          
+          <div class="results-subtabs">
+            <button class="subtab-btn active" data-subtab="subtab-spacesniffer">
+              SpaceSniffer (<span id="count-sniff-items">0</span>)
+            </button>
+            <button class="subtab-btn" data-subtab="subtab-folders">
+              Pastas Mais Pesadas (<span id="count-folders">0</span>)
+            </button>
+            <button class="subtab-btn" data-subtab="subtab-videos">
+              Vídeos Gigantes (<span id="count-videos">0</span>)
+            </button>
+          </div>
+
+          <!-- Sub-aba 1: SpaceSniffer (Treemap Interativo) -->
+          <div class="subtab-pane active" id="subtab-spacesniffer">
+            <div class="card spacesniffer-card">
+              
+              <!-- Barra de Navegação e Breadcrumb -->
+              <div class="sniff-nav-bar">
+                <div class="sniff-breadcrumbs-wrapper">
+                  <div class="sniff-breadcrumbs" id="sniff-breadcrumbs">
+                    <span class="crumb-item active">C:\</span>
+                  </div>
+                </div>
+                <div class="sniff-controls">
+                  <button class="btn btn-secondary btn-sm" id="btn-sniff-up" title="Voltar um nível de pasta">
+                    <span>↑ Subir</span>
+                  </button>
+                  <button class="btn btn-secondary btn-sm" id="btn-sniff-refresh" title="Recarregar pasta atual (forçar nova medição)">
+                    <span>Atualizar</span>
+                  </button>
+                  <button class="btn btn-secondary btn-sm" id="btn-sniff-explorer" title="Abrir pasta atual no Windows Explorer">
+                    <span>Abrir Pasta</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Indicador de carregamento interno da pasta -->
+              <div class="sniff-loading hidden" id="sniff-loading">
+                <div class="spinner"></div>
+                <span>Carregando subpastas e arquivos...</span>
+              </div>
+
+              <!-- Grade de Blocos Proporcionais (Treemap) -->
+              <div class="spacesniffer-grid" id="spacesniffer-grid">
+                <!-- Blocos gerados dinamicamente via JS -->
+              </div>
+
+              <!-- Legenda SpaceSniffer -->
+              <div class="sniff-footer-legend">
+                <div class="legend-items">
+                  <div class="legend-item"><span class="legend-color folder"></span> Pasta</div>
+                  <div class="legend-item"><span class="legend-color video"></span> Vídeo</div>
+                  <div class="legend-item"><span class="legend-color file"></span> Arquivo Geral</div>
+                </div>
+                <span class="sniff-hint">Dê duplo clique em qualquer pasta para navegar dentro dela.</span>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Sub-aba 2: Pastas Mais Pesadas (Tabela) -->
+          <div class="subtab-pane" id="subtab-folders">
+            <div class="card table-card">
+              <div class="table-responsive">
+                <table class="data-table fixed-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 45%; min-width: 200px;">Pasta</th>
+                      <th style="width: 15%; min-width: 90px;">Tamanho</th>
+                      <th style="width: 20%; min-width: 100px;">% do Total</th>
+                      <th style="width: 20%; min-width: 130px; text-align: right;">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="folders-table-body">
+                    <!-- Inserido dinamicamente via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sub-aba 3: Vídeos Gigantes -->
+          <div class="subtab-pane" id="subtab-videos">
+            <div class="card table-card">
+              <div class="table-info-banner">
+                <span>Dica: Use o botão <strong>"Pasta"</strong> para acessar o local exato do vídeo no Explorer, ou <strong>"Compactar"</strong> para liberar espaço sem perder o arquivo.</span>
+              </div>
+              <div class="table-responsive">
+                <table class="data-table fixed-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 28%; min-width: 170px;">Nome do Vídeo</th>
+                      <th style="width: 12%; min-width: 85px;">Tamanho</th>
+                      <th style="width: 28%; min-width: 170px;">Pasta Onde Está Salvo</th>
+                      <th style="width: 32%; min-width: 285px; text-align: right;">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="videos-table-body">
+                    <!-- Inserido dinamicamente via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+    </main>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

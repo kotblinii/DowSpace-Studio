@@ -24,8 +24,16 @@ export function banner() {
   console.log();
 }
 
+export function bannerCompress() {
+  console.log();
+  console.log(` ${colors.magenta}╭─────────────────────────────────────────────────────────────╮${colors.reset}`);
+  console.log(` ${colors.magenta}│${colors.reset}  ${colors.bold}${colors.white}🗜️  DownVideo Compress${colors.reset} ${colors.gray}— Compactador de Vídeo Inteligente${colors.reset}   ${colors.magenta}│${colors.reset}`);
+  console.log(` ${colors.magenta}╰─────────────────────────────────────────────────────────────╯${colors.reset}`);
+  console.log();
+}
+
 export function info(label, value) {
-  console.log(` ${colors.cyan}▶${colors.reset} ${colors.gray}${label.padEnd(10)}${colors.reset} ${colors.bold}${value}${colors.reset}`);
+  console.log(` ${colors.cyan}▶${colors.reset} ${colors.gray}${label.padEnd(16)}${colors.reset} ${colors.bold}${value}${colors.reset}`);
 }
 
 export function success(msg) {
@@ -47,9 +55,35 @@ export function step(msg) {
 }
 
 /**
+ * Formata bytes em representação humana amigável (B, KB, MB, GB).
+ */
+export function formatBytes(bytes) {
+  if (!bytes || isNaN(bytes) || bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const val = bytes / Math.pow(k, i);
+  return `${val.toFixed(i === 0 ? 0 : 2)} ${sizes[i]}`;
+}
+
+/**
+ * Formata segundos em mm:ss ou hh:mm:ss.
+ */
+export function formatDuration(sec) {
+  if (!sec || isNaN(sec) || sec <= 0) return '--:--';
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = Math.floor(sec % 60);
+  if (h > 0) {
+    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  }
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+/**
  * Renderiza uma barra de progresso suave no terminal em linha única.
  * @param {number} percent 0 a 100
- * @param {string} speed ex: "12.4MiB/s"
+ * @param {string} speed ex: "12.4MiB/s" ou "2.5x"
  * @param {string} eta ex: "00:15"
  * @param {string} size ex: "45.2MiB"
  */
@@ -72,4 +106,38 @@ export function renderProgress(percent, speed = '', eta = '', size = '') {
 
 export function clearProgress() {
   process.stdout.write('\r\x1b[K');
+}
+
+/**
+ * Exibe um resumo visual comparativo de antes e depois da compactação.
+ */
+export function renderCompressionSummary(summary) {
+  const { originalSize, finalSize, elapsedSec, outputPath, levelName } = summary;
+  const savedBytes = Math.max(0, originalSize - finalSize);
+  const reductionPct = originalSize > 0 ? ((savedBytes / originalSize) * 100).toFixed(1) : '0.0';
+
+  console.log();
+  console.log(` ${colors.magenta}╭─────────────────────────────────────────────────────────────╮${colors.reset}`);
+  console.log(` ${colors.magenta}│${colors.reset}  ${colors.bold}${colors.white}📊 Resumo da Otimização${colors.reset}                                    ${colors.magenta}│${colors.reset}`);
+  console.log(` ${colors.magenta}├─────────────────────────────────────────────────────────────┤${colors.reset}`);
+  console.log(` ${colors.magenta}│${colors.reset}  ${colors.gray}Nível Usado    :${colors.reset} ${colors.bold}${levelName.padEnd(42)}${colors.reset} ${colors.magenta}│${colors.reset}`);
+  console.log(` ${colors.magenta}│${colors.reset}  ${colors.gray}Tamanho Original:${colors.reset} ${colors.yellow}${formatBytes(originalSize).padEnd(42)}${colors.reset} ${colors.magenta}│${colors.reset}`);
+  console.log(` ${colors.magenta}│${colors.reset}  ${colors.gray}Tamanho Final   :${colors.reset} ${colors.green}${colors.bold}${formatBytes(finalSize).padEnd(42)}${colors.reset} ${colors.magenta}│${colors.reset}`);
+  
+  if (savedBytes > 0) {
+    const savingsStr = `🔻 -${reductionPct}% (${formatBytes(savedBytes)} mais leve)`;
+    console.log(` ${colors.magenta}│${colors.reset}  ${colors.gray}Economia        :${colors.reset} ${colors.green}${colors.bold}${savingsStr.padEnd(42)}${colors.reset} ${colors.magenta}│${colors.reset}`);
+  } else {
+    const noSaveStr = `O arquivo original já estava altamente otimizado`;
+    console.log(` ${colors.magenta}│${colors.reset}  ${colors.gray}Observação      :${colors.reset} ${colors.yellow}${noSaveStr.padEnd(42)}${colors.reset} ${colors.magenta}│${colors.reset}`);
+  }
+
+  if (elapsedSec) {
+    const timeStr = `${elapsedSec.toFixed(1)} segundos`;
+    console.log(` ${colors.magenta}│${colors.reset}  ${colors.gray}Tempo Gasto     :${colors.reset} ${timeStr.padEnd(42)} ${colors.magenta}│${colors.reset}`);
+  }
+
+  console.log(` ${colors.magenta}╰─────────────────────────────────────────────────────────────╯${colors.reset}`);
+  console.log();
+  console.log(` ${colors.gray}📁 Arquivo pronto e otimizado:${colors.reset} ${colors.bold}${outputPath}${colors.reset}\n`);
 }
