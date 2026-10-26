@@ -83,23 +83,44 @@ document.addEventListener('DOMContentLoaded', async () => {
   let currentFolderPath = null;
   let rootScanData = null;
 
-  async function loadDrives() {
+  async function loadDrives(targetDriveId = null) {
     try {
       currentDrives = await api.getDrives();
       if (!currentDrives || currentDrives.length === 0) return;
 
-      selectedDrive = currentDrives.find(d => d.id.toUpperCase() === 'C:') || currentDrives[0];
-      customScanPath = selectedDrive.id + '\\';
-      currentFolderPath = customScanPath;
+      const driveToSelectId = targetDriveId || (selectedDrive ? selectedDrive.id : null);
+      if (driveToSelectId) {
+        selectedDrive = currentDrives.find(d => d.id.toUpperCase() === driveToSelectId.toUpperCase()) || currentDrives[0];
+      } else {
+        selectedDrive = currentDrives.find(d => d.id.toUpperCase() === 'C:') || currentDrives[0];
+      }
 
-      updateSidebarSSDWidget(selectedDrive);
-      renderDriveSelector();
-      updateDriveOverview(selectedDrive);
-
-      // Carrega automaticamente a varredura salva no banco se houver
-      await loadSavedScanIfAvailable(customScanPath);
+      await selectDrive(selectedDrive, false);
     } catch (err) {
       console.error('Falha ao carregar informações das unidades:', err);
+    }
+  }
+
+  async function selectDrive(drive, autoScanIfMissing = true) {
+    if (!drive) return;
+    selectedDrive = drive;
+    const driveRoot = drive.id.endsWith('\\') ? drive.id : drive.id + '\\';
+    customScanPath = driveRoot;
+    currentFolderPath = driveRoot;
+    localFolderCache.clear();
+
+    renderDriveSelector();
+    updateDriveOverview(drive);
+    updateSidebarSSDWidget(drive);
+
+    const loaded = await loadSavedScanIfAvailable(customScanPath);
+    if (!loaded) {
+      rootScanData = null;
+      if (autoScanIfMissing) {
+        await performScan(customScanPath);
+      } else {
+        scanResultsContainer.classList.add('hidden');
+      }
     }
   }
 
@@ -127,17 +148,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     currentDrives.forEach(drive => {
       const btn = document.createElement('button');
-      btn.className = `drive-pill ${drive.id === selectedDrive.id ? 'active' : ''}`;
+      btn.className = `drive-pill ${drive.id.toUpperCase() === selectedDrive.id.toUpperCase() ? 'active' : ''}`;
       btn.title = `${drive.label} (${drive.totalFormatted}) - ${drive.usedPercent}% utilizado`;
       btn.innerHTML = `<span class="pill-drive-name">Disco (${drive.id})</span> <span class="pill-drive-pct">${drive.usedPercent}%</span>`;
       btn.addEventListener('click', async () => {
-        selectedDrive = drive;
-        customScanPath = drive.id + '\\';
-        currentFolderPath = customScanPath;
-        renderDriveSelector();
-        updateDriveOverview(drive);
-        updateSidebarSSDWidget(drive);
-        await loadSavedScanIfAvailable(customScanPath);
+        if (selectedDrive && selectedDrive.id.toUpperCase() === drive.id.toUpperCase()) {
+          return;
+        }
+        await selectDrive(drive, true);
       });
       container.appendChild(btn);
     });
@@ -179,6 +197,46 @@ document.addEventListener('DOMContentLoaded', async () => {
   const localFolderCache = new Map();
 
   /**
+   * Executa a varredura profunda de uma unidade ou pasta e renderiza os resultados
+   */
+  async function performScan(targetPath) {
+    if (isScanning) return;
+    isScanning = true;
+
+    btnStartScan.disabled = true;
+    btnCancelScan.classList.remove('hidden');
+    scanLiveProgress.classList.remove('hidden');
+    scanResultsContainer.classList.add('hidden');
+
+    try {
+      const res = await api.scanDirectory(targetPath, {
+        minVideoSize: 50 * 1024 * 1024 // 50 MB
+      });
+
+      if (res.success && res.data) {
+        rootScanData = res.data;
+        currentFolderPath = res.data.rootPath;
+
+        if (dbStatusBadge) {
+          dbStatusBadge.textContent = 'Salvo Agora';
+          dbStatusBadge.classList.remove('hidden');
+        }
+
+        renderAllScanResults(res.data);
+      } else if (res.error) {
+        alert(`Erro na varredura: ${res.error}`);
+      }
+    } catch (err) {
+      alert(`Falha no escaneamento: ${err.message}`);
+    } finally {
+      isScanning = false;
+      btnStartScan.disabled = false;
+      btnCancelScan.classList.add('hidden');
+      scanLiveProgress.classList.add('hidden');
+    }
+  }
+
+  /**
    * Busca e carrega os dados salvos em banco local para a pasta/unidade selecionada
    */
   async function loadSavedScanIfAvailable(targetPath) {
@@ -198,19 +256,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         renderAllScanResults(res.data);
+        return true;
       }
+      return false;
     } catch (err) {
       console.error('Erro ao buscar dados salvos no banco:', err);
+      return false;
     }
   }
 
   btnChangeScanFolder.addEventListener('click', async () => {
     const chosen = await api.selectFolder();
     if (chosen) {
-      customScanPath = chosen;
-      currentFolderPath = chosen;
+      customScanPath = chosen.endsWith('\\') ? chosen : chosen + '\\';
+      currentFolderPath = customScanPath;
+      localFolderCache.clear();
       document.getElementById('scan-target-path').textContent = customScanPath;
-      await loadSavedScanIfAvailable(customScanPath);
+      const loaded = await loadSavedScanIfAvailable(customScanPath);
+      if (!loaded) {
+        rootScanData = null;
+        await performScan(customScanPath);
+      }
     }
   });
 
@@ -221,13 +287,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const btnRefreshAll = document.getElementById('btn-refresh-all');
 
-  async function refreshStorageOverview(recheckDrives = true) {
-    if (recheckDrives) {
-      await loadDrives();
-    }
+  async function refreshStorageOverview() {
     localFolderCache.clear();
+    // 1. Atualiza métricas de todas as unidades conectadas sem perder o disco selecionado
+    currentDrives = await api.getDrives();
+    if (currentDrives && currentDrives.length > 0 && selectedDrive) {
+      const updated = currentDrives.find(d => d.id.toUpperCase() === selectedDrive.id.toUpperCase());
+      if (updated) {
+        selectedDrive = updated;
+        updateDriveOverview(selectedDrive);
+        updateSidebarSSDWidget(selectedDrive);
+        renderDriveSelector();
+      }
+    }
+    // 2. Realiza nova varredura da unidade/pasta atualmente ativa
     if (customScanPath) {
-      await loadSavedScanIfAvailable(customScanPath);
+      await performScan(customScanPath);
     }
   }
 
@@ -237,7 +312,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const prevHtml = btnRefreshAll.innerHTML;
       btnRefreshAll.innerHTML = '<span>Atualizando...</span>';
       try {
-        await refreshStorageOverview(true);
+        await refreshStorageOverview();
       } finally {
         btnRefreshAll.disabled = false;
         btnRefreshAll.innerHTML = prevHtml;
@@ -286,39 +361,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   btnStartScan.addEventListener('click', async () => {
-    if (isScanning) return;
-    isScanning = true;
-
-    btnStartScan.disabled = true;
-    btnCancelScan.classList.remove('hidden');
-    scanLiveProgress.classList.remove('hidden');
-    scanResultsContainer.classList.add('hidden');
-
-    try {
-      const res = await api.scanDirectory(customScanPath, {
-        minVideoSize: 50 * 1024 * 1024 // 50 MB
-      });
-
-      if (res.success && res.data) {
-        rootScanData = res.data;
-        currentFolderPath = res.data.rootPath;
-
-        if (dbStatusBadge) {
-          dbStatusBadge.textContent = 'Salvo Agora';
-          dbStatusBadge.classList.remove('hidden');
-        }
-
-        renderAllScanResults(res.data);
-      } else if (res.error) {
-        alert(`Erro na varredura: ${res.error}`);
-      }
-    } catch (err) {
-      alert(`Falha no escaneamento: ${err.message}`);
-    } finally {
-      isScanning = false;
-      btnStartScan.disabled = false;
-      btnCancelScan.classList.add('hidden');
-      scanLiveProgress.classList.add('hidden');
+    if (customScanPath) {
+      await performScan(customScanPath);
     }
   });
 

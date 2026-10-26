@@ -3,14 +3,14 @@
 
 $wsh = New-Object -ComObject WScript.Shell
 
-$exePath = "C:\Users\Usuario\.gemini\antigravity-ide\scratch\downvideo\dist\DownVideo Studio-win32-x64\DownVideo Studio.exe"
-$workDir = "C:\Users\Usuario\.gemini\antigravity-ide\scratch\downvideo\dist\DownVideo Studio-win32-x64"
+$exePath = "C:\Users\Usuario\.gemini\antigravity-ide\scratch\downvideo\dist\DowSpace Studio-win32-x64\DowSpace Studio.exe"
+$workDir = "C:\Users\Usuario\.gemini\antigravity-ide\scratch\downvideo\dist\DowSpace Studio-win32-x64"
 $iconPath = "C:\Users\Usuario\.gemini\antigravity-ide\scratch\downvideo\assets\icon.ico"
-$desc = "DownVideo Studio - Baixador de Videos, Compactador e Gerenciador de SSD"
+$desc = "DowSpace Studio - Baixador de Videos, Compactador e Gerenciador de SSD"
 
 # 1. Atalho na Area de Trabalho (Desktop)
 $desktopPath = [Environment]::GetFolderPath("Desktop")
-$desktopShortcutPath = Join-Path $desktopPath "DownVideo Studio.lnk"
+$desktopShortcutPath = Join-Path $desktopPath "DowSpace Studio.lnk"
 
 $s1 = $wsh.CreateShortcut($desktopShortcutPath)
 $s1.TargetPath = $exePath
@@ -21,7 +21,7 @@ $s1.Save()
 Write-Output "Atalho criado com sucesso na Area de Trabalho: $desktopShortcutPath"
 
 # 2. Atalho na pasta raiz do projeto
-$rootShortcutPath = "C:\Users\Usuario\.gemini\antigravity-ide\scratch\downvideo\DownVideo Studio.lnk"
+$rootShortcutPath = "C:\Users\Usuario\.gemini\antigravity-ide\scratch\downvideo\DowSpace Studio.lnk"
 $s2 = $wsh.CreateShortcut($rootShortcutPath)
 $s2.TargetPath = $exePath
 $s2.WorkingDirectory = $workDir

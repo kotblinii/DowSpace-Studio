@@ -67,12 +67,20 @@ export function writeDatabase(db) {
   }
 }
 
+function normalizeKey(targetPath) {
+  let resolved = path.resolve(targetPath);
+  if (/^[a-zA-Z]:$/.test(resolved)) {
+    resolved += '\\';
+  }
+  return resolved.toLowerCase();
+}
+
 /**
  * Salva uma varredura completa de uma unidade ou pasta.
  */
 export function saveScanResult(rootPath, scanData) {
   const db = readDatabase();
-  const key = path.resolve(rootPath).toLowerCase();
+  const key = normalizeKey(rootPath);
 
   db.scans[key] = {
     rootPath: path.resolve(rootPath),
@@ -93,7 +101,7 @@ export function saveScanResult(rootPath, scanData) {
  */
 export function getSavedScan(rootPath) {
   const db = readDatabase();
-  const key = path.resolve(rootPath).toLowerCase();
+  const key = normalizeKey(rootPath);
   const scan = db.scans[key];
   if (!scan) return null;
 
@@ -108,7 +116,7 @@ export function getSavedScan(rootPath) {
  */
 export function saveFolderContentsCache(dirPath, data) {
   const db = readDatabase();
-  const key = path.resolve(dirPath).toLowerCase();
+  const key = normalizeKey(dirPath);
 
   if (!db.folderContents) db.folderContents = {};
   db.folderContents[key] = {
@@ -129,7 +137,7 @@ export function saveFolderContentsCache(dirPath, data) {
 export function getSavedFolderContents(dirPath) {
   const db = readDatabase();
   if (!db.folderContents) return null;
-  const key = path.resolve(dirPath).toLowerCase();
+  const key = normalizeKey(dirPath);
   return db.folderContents[key] || null;
 }
 

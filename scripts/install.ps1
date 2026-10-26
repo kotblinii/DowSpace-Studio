@@ -13,9 +13,15 @@ Write-Host "      DowSpace Studio - Instalador para Windows           " -Foregro
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host ""
 
-$sourceDir = Join-Path $PSScriptRoot "..\dist\DownVideo Studio-win32-x64"
+$sourceDir = Join-Path $PSScriptRoot "..\dist\DowSpace Studio-win32-x64"
+if (-not (Test-Path $sourceDir)) {
+    $sourceDir = Join-Path $PSScriptRoot "..\dist\DownVideo Studio-win32-x64"
+}
 $installDir = Join-Path $env:LOCALAPPDATA "DowSpace Studio"
-$exeName = "DownVideo Studio.exe"
+$exeName = "DowSpace Studio.exe"
+if (-not (Test-Path (Join-Path $sourceDir $exeName))) {
+    $exeName = "DownVideo Studio.exe"
+}
 $targetExe = Join-Path $installDir $exeName
 $iconPath = Join-Path $installDir "assets\icon.ico"
 
@@ -32,7 +38,7 @@ if (-not (Test-Path (Join-Path $sourceDir $exeName))) {
 
 # 2. Fecha processos existentes se estiver aberto
 Write-Host "[2/5] Verificando se o DowSpace Studio esta em execucao..." -ForegroundColor White
-Get-Process -Name "*DownVideo Studio*" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Get-Process -Name "*DowSpace Studio*", "*DownVideo Studio*" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Milliseconds 800
 
 # 3. Cria a pasta de destino e copia os arquivos
@@ -89,7 +95,7 @@ Write-Host "[5/5] Registrando o aplicativo no Painel do Windows..." -ForegroundC
 
 $uninstallerScript = @"
 # Desinstalador do DowSpace Studio
-Get-Process -Name "*DownVideo Studio*" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Get-Process -Name "*DowSpace Studio*", "*DownVideo Studio*" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 1
 
 `$desktopShortcut = Join-Path ([Environment]::GetFolderPath("Desktop")) "DowSpace Studio.lnk"
