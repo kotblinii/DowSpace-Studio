@@ -19,6 +19,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getFolderContents: (dirPath, options) => ipcRenderer.invoke('disk:get-folder-contents', dirPath, options),
   removeFileFromDb: (filePath, freedBytes) => ipcRenderer.invoke('disk:remove-file-db', filePath, freedBytes),
   cancelScan: () => ipcRenderer.invoke('disk:cancel-scan'),
+  scanAppCaches: () => ipcRenderer.invoke('cache:scan'),
+  cleanSelectedCaches: (cacheIds) => ipcRenderer.invoke('cache:clean', cacheIds),
   onScanProgress: (callback) => {
     const handler = (_event, data) => callback(data);
     ipcRenderer.on('disk:scan-progress', handler);

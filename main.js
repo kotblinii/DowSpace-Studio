@@ -22,6 +22,7 @@ import {
   getSavedFolderContents,
   removeFileFromDatabase
 } from './src/storageDatabase.js';
+import { scanAppCaches, cleanSelectedCaches } from './src/cacheCleaner.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -232,6 +233,25 @@ ipcMain.handle('disk:cancel-scan', async () => {
     return { canceled: true };
   }
   return { canceled: false };
+});
+
+// Limpador de Cache de Aplicativos
+ipcMain.handle('cache:scan', async () => {
+  try {
+    const list = await scanAppCaches();
+    return { success: true, data: list };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('cache:clean', async (_event, cacheIds = []) => {
+  try {
+    const result = await cleanSelectedCaches(cacheIds);
+    return result;
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
 });
 
 // Compactador de Vídeo

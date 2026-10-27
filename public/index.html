@@ -416,8 +416,8 @@
           </div>
         </div>
 
-        <!-- Resultados do Scanner: SpaceSniffer, Pastas e Vídeos -->
-        <div class="scan-results-container hidden" id="scan-results-container">
+        <!-- Resultados do Scanner: SpaceSniffer, Pastas, Vídeos e Caches -->
+        <div class="scan-results-container" id="scan-results-container">
           
           <div class="results-subtabs">
             <button class="subtab-btn active" data-subtab="subtab-spacesniffer">
@@ -428,6 +428,9 @@
             </button>
             <button class="subtab-btn" data-subtab="subtab-videos">
               Vídeos Gigantes (<span id="count-videos">0</span>)
+            </button>
+            <button class="subtab-btn" data-subtab="subtab-cache">
+              Limpar Caches (<span id="count-caches">0</span>)
             </button>
           </div>
 
@@ -521,6 +524,42 @@
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+
+          <!-- Sub-aba 4: Limpeza de Cache de Aplicativos -->
+          <div class="subtab-pane" id="subtab-cache">
+            <div class="cache-cleaner-card card">
+              
+              <!-- Banner de Destaque / Ação Rápida -->
+              <div class="cache-hero-banner">
+                <div class="cache-hero-info">
+                  <h3>Caches e Temporários de Aplicativos</h3>
+                  <p>Libere gigabytes acumulados pelo After Effects, placas de vídeo e navegadores sem afetar seus projetos ou configurações.</p>
+                </div>
+                <div class="cache-hero-actions">
+                  <div class="cache-total-badge">
+                    <span class="badge-label">Total Liberável</span>
+                    <span class="badge-val" id="cache-total-freed-val">-- GB</span>
+                  </div>
+                  <button class="btn btn-primary btn-large" id="btn-clean-selected-caches" disabled>
+                    <span>Limpar Caches Selecionados</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Lista de Caches Detectados -->
+              <div class="cache-items-list" id="cache-items-container">
+                <!-- Inserido dinamicamente via JS -->
+              </div>
+
+              <!-- Estado Vazio / Limpo -->
+              <div class="cache-empty-state hidden" id="cache-empty-state">
+                <div class="empty-icon">✓</div>
+                <h4>Todos os caches estão limpos!</h4>
+                <p>Seus aplicativos não possuem caches pesados acumulados no momento.</p>
+              </div>
+
             </div>
           </div>
 

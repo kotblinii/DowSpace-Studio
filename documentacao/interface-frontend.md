@@ -32,6 +32,7 @@ A aplicação adota um layout com **Sidebar Fixa à Esquerda** e **Área de Cont
      - **SpaceSniffer (Treemap Interativo):** Visualização em blocos coloridos proporcionais.
      - **Pastas Mais Pesadas:** Tabela classificada com barras de porcentagem.
      - **Vídeos Gigantes:** Tabela de arquivos pesados com ações de abrir pasta, destacar no Explorer, compactar e excluir.
+     - **Limpar Caches:** Varredura e limpeza inteligente de caches pesados de aplicativos (Adobe After Effects, shaders da placa de vídeo NVIDIA/AMD, temporários do Windows, Discord, Spotify e navegadores), com detecção de processo em execução, visualização da pasta no Explorer e limpeza seletiva em lote.
 
 ---
 

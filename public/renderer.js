@@ -68,6 +68,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       btn.classList.add('active');
       const targetPane = document.getElementById(btn.dataset.subtab);
       if (targetPane) targetPane.classList.add('active');
+      if (btn.dataset.subtab === 'subtab-cache') {
+        loadAndRenderAppCaches(true);
+      }
     });
   });
 
@@ -764,6 +767,182 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // =========================================================================
+  // 7.1 Limpeza de Cache de Aplicativos (After Effects, Placas de Vídeo, etc.)
+  // =========================================================================
+  const countCachesEl = document.getElementById('count-caches');
+  const cacheItemsContainer = document.getElementById('cache-items-container');
+  const cacheEmptyState = document.getElementById('cache-empty-state');
+  const cacheTotalFreedVal = document.getElementById('cache-total-freed-val');
+  const btnCleanSelectedCaches = document.getElementById('btn-clean-selected-caches');
+
+  let currentAppCaches = [];
+  let isScanningCaches = false;
+
+  async function loadAndRenderAppCaches(renderUi = true) {
+    if (isScanningCaches) return;
+    isScanningCaches = true;
+
+    try {
+      const res = await api.scanAppCaches();
+      if (res && res.success && Array.isArray(res.data)) {
+        currentAppCaches = res.data;
+        if (countCachesEl) {
+          countCachesEl.textContent = currentAppCaches.length;
+        }
+
+        if (renderUi) {
+          renderAppCachesList(currentAppCaches);
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao varrer caches de aplicativos:', err);
+    } finally {
+      isScanningCaches = false;
+    }
+  }
+
+  function updateCacheSelectedTotals() {
+    if (!cacheItemsContainer) return;
+    const checkboxes = cacheItemsContainer.querySelectorAll('.cache-checkbox:checked');
+    const selectedIds = Array.from(checkboxes).map(cb => cb.dataset.id);
+
+    let totalSelectedBytes = 0;
+    currentAppCaches.forEach(item => {
+      if (selectedIds.includes(item.id)) {
+        totalSelectedBytes += item.sizeBytes || 0;
+      }
+    });
+
+    if (cacheTotalFreedVal) {
+      cacheTotalFreedVal.textContent = formatBytesJs(totalSelectedBytes);
+    }
+
+    if (btnCleanSelectedCaches) {
+      btnCleanSelectedCaches.disabled = selectedIds.length === 0;
+      const countStr = selectedIds.length > 0 ? ` (${selectedIds.length})` : '';
+      btnCleanSelectedCaches.innerHTML = `<span>Limpar Caches Selecionados${countStr}</span>`;
+    }
+  }
+
+  function renderAppCachesList(caches) {
+    if (!cacheItemsContainer) return;
+    cacheItemsContainer.innerHTML = '';
+
+    if (!caches || caches.length === 0) {
+      if (cacheEmptyState) cacheEmptyState.classList.remove('hidden');
+      if (btnCleanSelectedCaches) btnCleanSelectedCaches.disabled = true;
+      if (cacheTotalFreedVal) cacheTotalFreedVal.textContent = '0 B';
+      return;
+    }
+
+    if (cacheEmptyState) cacheEmptyState.classList.add('hidden');
+
+    caches.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'cache-item-card';
+      card.dataset.id = item.id;
+
+      const isHuge = item.sizeBytes > 1024 * 1024 * 1024; // > 1GB
+      const procWarningHtml = item.processRunning
+        ? `<span class="cache-proc-warn" title="O aplicativo está aberto no Windows. Feche-o para conseguir limpar todos os arquivos com segurança.">⚠️ Programa em execução (${escapeHtml(item.activeProcesses.join(', '))})</span>`
+        : '';
+
+      card.innerHTML = `
+        <div class="cache-item-left">
+          <input type="checkbox" class="cache-checkbox" data-id="${escapeHtml(item.id)}" checked title="Marcar para limpeza">
+          <div class="cache-item-details">
+            <div class="cache-item-title-row">
+              <span class="cache-item-name">${escapeHtml(item.name)}</span>
+              <span class="cache-app-tag">${escapeHtml(item.app)}</span>
+              ${procWarningHtml}
+            </div>
+            <div class="cache-item-desc">${escapeHtml(item.description)}</div>
+            <div class="cache-item-path" title="${escapeHtml(item.path)}">
+              📁 ${escapeHtml(item.path)} • <strong>${item.fileCount ? item.fileCount.toLocaleString('pt-BR') : 0} arquivos</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="cache-item-right">
+          <span class="cache-item-size ${isHuge ? 'huge' : ''}">${item.sizeFormatted}</span>
+          <div class="cache-item-actions">
+            <button class="table-btn btn-open-parent btn-cache-open" title="Abrir pasta no Windows Explorer">Pasta</button>
+            <button class="table-btn btn-delete-row btn-cache-clean" title="Limpar este cache agora">Limpar</button>
+          </div>
+        </div>
+      `;
+
+      // Checkbox listener
+      const cb = card.querySelector('.cache-checkbox');
+      cb.addEventListener('change', () => {
+        updateCacheSelectedTotals();
+      });
+
+      // Botão Pasta
+      card.querySelector('.btn-cache-open').addEventListener('click', () => {
+        api.openFolderInExplorer(item.path);
+      });
+
+      // Botão Limpar individual
+      card.querySelector('.btn-cache-clean').addEventListener('click', async () => {
+        if (confirm(`Deseja limpar o cache de "${item.name}"?\n\nTamanho a liberar: ${item.sizeFormatted}\n\nOs arquivos de cache e pré-visualização serão removidos com segurança.`)) {
+          await executeCachesCleanup([item.id]);
+        }
+      });
+
+      cacheItemsContainer.appendChild(card);
+    });
+
+    updateCacheSelectedTotals();
+  }
+
+  async function executeCachesCleanup(cacheIds) {
+    if (!cacheIds || cacheIds.length === 0) return;
+
+    if (btnCleanSelectedCaches) {
+      btnCleanSelectedCaches.disabled = true;
+      btnCleanSelectedCaches.innerHTML = '<span>Limpando Caches...</span>';
+    }
+
+    try {
+      const res = await api.cleanSelectedCaches(cacheIds);
+      if (res && res.success) {
+        let msg = `Limpeza Concluída com Sucesso!\n\n` +
+                  `Espaço liberado: ${res.totalFreedFormatted}\n` +
+                  `Arquivos excluídos: ${res.totalDeletedFiles.toLocaleString('pt-BR')}`;
+        if (res.totalSkippedFiles > 0) {
+          msg += `\n\nNota: ${res.totalSkippedFiles.toLocaleString('pt-BR')} arquivo(s) foram ignorados por estarem bloqueados em uso pelo sistema operacional ou pelo próprio aplicativo.`;
+        }
+        alert(msg);
+
+        // Recarrega informações do SSD e lista de caches
+        await loadDrives(selectedDrive ? selectedDrive.id : null);
+        await loadAndRenderAppCaches(true);
+      } else {
+        alert(res?.error || 'Erro ao realizar a limpeza de cache.');
+      }
+    } catch (err) {
+      alert(`Falha na limpeza: ${err.message}`);
+    } finally {
+      updateCacheSelectedTotals();
+    }
+  }
+
+  if (btnCleanSelectedCaches) {
+    btnCleanSelectedCaches.addEventListener('click', async () => {
+      if (!cacheItemsContainer) return;
+      const checkedBoxes = cacheItemsContainer.querySelectorAll('.cache-checkbox:checked');
+      const selectedIds = Array.from(checkedBoxes).map(cb => cb.dataset.id);
+      if (selectedIds.length === 0) return;
+
+      const totalText = cacheTotalFreedVal ? cacheTotalFreedVal.textContent : '';
+      if (confirm(`Deseja limpar os ${selectedIds.length} caches selecionados?\n\nEspaço estimado a liberar: ~${totalText}\n\nSeus projetos, vídeos e configurações NÃO serão afetados.`)) {
+        await executeCachesCleanup(selectedIds);
+      }
+    });
+  }
+
+  // =========================================================================
   // 8. Aba de Compactação de Vídeo
   // =========================================================================
   const dropzone = document.getElementById('compress-dropzone');
@@ -1155,6 +1334,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       .replace(/'/g, '&#039;');
   }
 
-  // Inicializa carregando as unidades do sistema
+  // Inicializa carregando as unidades do sistema e verificando caches
   await loadDrives();
+  loadAndRenderAppCaches(false);
 });

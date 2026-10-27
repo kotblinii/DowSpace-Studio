@@ -74,3 +74,23 @@ Garante que o aplicativo seja 100% autônomo e não exija que o usuário instale
   - Verifica se `bin/yt-dlp.exe` existe. Se ausente, faz o download via streaming com barra de progresso da versão oficial mais recente do GitHub.
   - Verifica se `bin/ffmpeg.exe` existe ou está no PATH do Windows. Se ausente, baixa o pacote pré-compilado de 64 bits e extrai automaticamente usando o utilitário nativo `tar.exe` do Windows.
 - **`updateYtDlp()`**: Executa `yt-dlp.exe -U` para atualizar o motor de extração sempre que o YouTube modificar seus algoritmos.
+
+---
+
+## 6. [`src/cacheCleaner.js`](file:///c:/Users/Usuario/.gemini/antigravity-ide/scratch/downvideo/src/cacheCleaner.js) — Limpeza Inteligente de Caches de Aplicativos
+
+Detecta e remove gigabytes acumulados por softwares de edição de vídeo, placas de vídeo e programas do Windows sem afetar projetos, configurações ou mídias do usuário.
+
+### Catálogo de Caches Monitorados:
+- **Adobe After Effects (Disk Cache):** Caches de pré-visualização de RAM e renderizações temporárias (`Temp/Adobe/After Effects/.../Disk Cache`). Seguro para limpar; o After Effects recria sob demanda.
+- **Adobe Common (Media Cache & Peak Files):** Arquivos de forma de onda (.cfa, .pek) e metadados compartilhados entre Premiere Pro, After Effects e Media Encoder.
+- **NVIDIA DirectX & OpenGL/Vulkan Cache:** Caches de shaders compilados pela placa de vídeo em `AppData/Local/NVIDIA/DXCache` e `GLCache`.
+- **AMD Radeon Shader Cache:** Shaders da placa gráfica AMD em `AppData/Local/AMD/DxCache`.
+- **Windows Temp:** Instaladores residuais e arquivos temporários descompactados em `%TEMP%`.
+- **Caches de Aplicativos e Web:** Discord, Spotify, Google Chrome e Microsoft Edge.
+
+### Funções Principais:
+- **`scanAppCaches()`**: Varre o catálogo de locais conhecidos, calcula o tamanho ocupado em disco e verifica se o aplicativo associado está atualmente aberto no Windows via `Get-CimInstance Win32_Process`.
+- **`purgeCacheFolder(targetPath)`**: Remove recursivamente arquivos internos e subpastas mantendo a raiz do diretório intacta para total estabilidade dos aplicativos.
+- **`cleanSelectedCaches(cacheIds)`**: Executa a limpeza em lote dos caches selecionados pelo usuário, contabilizando arquivos excluídos, arquivos bloqueados em uso e o total de gigabytes liberados.
+
